@@ -29,6 +29,12 @@ router.get('/:id/reviews', async (req, res) => {
         // Fetch reviews for the requested dorm
         const reviews = await prisma.review.findMany({
             where: { dormId: parseInt(dormID) },
+
+            include: {
+                user: {
+                    select: { displayName: true }
+                }
+            }
         });
 
         // Return the reviews for dorm
