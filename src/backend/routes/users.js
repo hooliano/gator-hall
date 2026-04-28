@@ -24,7 +24,10 @@ router.get('/:id/reviews', async (req, res) => {
             }
         });
 
-        res.json(user_reviews);
+        res.json({
+            user: attempted_user,
+            reviews: user_reviews
+        });
     }
     catch (error) {
         res.status(500).json({ error: 'Something went wrong.' });

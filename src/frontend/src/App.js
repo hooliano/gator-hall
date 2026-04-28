@@ -13,7 +13,7 @@ function App() {
         <Route path="/register" element={<Register />} />
         <Route path="/login" element={<Login />} />
         <Route path="/dorms/:id" element={<DormPage />} />
-        <Route path="/profild" element={<Profile />} />
+        <Route path="/users/:id" element={<Profile />} />
       </Routes>
     </BrowserRouter>
   );

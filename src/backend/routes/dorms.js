@@ -85,6 +85,9 @@ router.post('/:id/reviews', authMiddleware, async (req, res) => {
                 rating: rating,
                 userId: userId,
                 dormId: dormId,
+            },
+            include: {
+                user: true
             }
         });
 
