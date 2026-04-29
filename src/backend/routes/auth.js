@@ -43,7 +43,7 @@ router.post('/register', async (req, res) => {
         // Create and send JWT token
         const auth_token = jwt.sign({ email: user_email, userId: created_user.id }, process.env.JWT_SECRET, { expiresIn: '7 days' });
 
-        res.status(201).json({ token: auth_token });
+        res.status(201).json({ token: auth_token, userId: created_user.id });
     }
     catch (error) {
         console.log(error);
@@ -72,7 +72,7 @@ router.post('/login', async (req, res) => {
         }
 
         const auth_token = jwt.sign({ email: login_email, userId: attempted_user.id }, process.env.JWT_SECRET, { expiresIn: '7 days' });
-        res.status(200).json({ token: auth_token });
+        res.status(200).json({ token: auth_token, userId: attempted_user.id });
     }
     catch (error) {
         res.status(500).json({ error: 'Something went wrong.' });

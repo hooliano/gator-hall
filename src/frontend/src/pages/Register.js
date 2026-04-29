@@ -13,6 +13,7 @@ function Register() {
         try {
             const response = await api.post('/auth/register', { display_name, email, password });
             localStorage.setItem('token', response.data.token);
+            localStorage.setItem('userId', response.data)
             navigate('/');
         }
         catch (error) {

@@ -4,10 +4,10 @@ import Home from './pages/Home.js';
 import Login from './pages/Login.js';
 import Profile from './pages/Profile.js';
 import Register from './pages/Register.js';
-import Navbar from './components/Navbar.js';
 
 function AppLayout() {
   const location = useLocation();
+  const id = localStorage.getItem('userId');
   const linkClass = (path) => `rounded-full px-4 py-2 text-sm font-medium transition ${location.pathname === path
     ? 'bg-ufOrange text-white shadow'
     : 'text-slate-700 hover:bg-blue-50 hover:text-ufBlue'
@@ -22,13 +22,30 @@ function AppLayout() {
           </Link>
           <nav className="flex items-center gap-2">
             <Link className={linkClass('/')} to="/">Home</Link>
-            <Link className={linkClass('/login')} to="/login">Login</Link>
-            <Link className={linkClass('/register')} to="/register">Register</Link>
+            {localStorage.getItem('token') ? (
+              <>
+                <Link className={linkClass(`/users/${id}`)} to={`/users/${id}`}>Profile</Link>
+                <button
+                  onClick={() => {
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('userId');
+                    window.location.href = '/login';
+                  }}
+                  className="rounded-full px-4 py-2 text-sm font-medium text-slate-700 hover:bg-blue-50 hover:text-ufBlue transition"
+                >
+                  Logout
+                </button>
+              </>
+            ) : (
+              <>
+                <Link className={linkClass('/login')} to="/login">Login</Link>
+                <Link className={linkClass('/register')} to="/register">Register</Link>
+              </>
+            )}
           </nav>
         </div>
-      </header>
+      </header >
       <main className="mx-auto w-full max-w-6xl px-4 py-8">
-        <Navbar />
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/register" element={<Register />} />
@@ -37,7 +54,7 @@ function AppLayout() {
           <Route path="/users/:id" element={<Profile />} />
         </Routes>
       </main>
-    </div>
+    </div >
   );
 }
 

@@ -1,15 +1,42 @@
 import { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import api from '../api'
 
 
 function Profile() {
+    const [editingId, setEditingId] = useState(null);
+    const [editBody, setEditBody] = useState('');
+    const [editRating, setEditRating] = useState('');
     const [user, setUser] = useState(null);
     const [reviews, setReviews] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
-
     const { id } = useParams();
+
+    const navigate = useNavigate();
+
+    const loggedInUserId = parseInt(localStorage.getItem('userId'));
+
+    const handleDelete = async (dormId, reviewId) => {
+        try {
+            await api.delete(`/dorms/${dormId}/reviews/${reviewId}`);
+            setReviews(reviews.filter(r => r.id !== reviewId));
+        }
+        catch (error) {
+            setError(error.response?.data?.error || 'Something went wrong.');
+        }
+    };
+
+    const handleUpdate = async (dormId, reviewId) => {
+        try {
+            const response = await api.patch(`/dorms/${dormId}/reviews/${reviewId}`, { rating: editRating, review_body: editBody });
+            setReviews(reviews.map(r => r.id === reviewId ? { ...response.data.review, dorm: r.dorm } : r));
+            setEditingId(null);
+        }
+        catch (error) {
+            setError(error.response?.data?.error || 'Something went wrong.');
+        }
+    };
 
     useEffect(() => {
         const fetchUserReviews = async () => {
@@ -28,6 +55,7 @@ function Profile() {
         fetchUserReviews();
     }, [id]);
 
+    if (!localStorage.getItem('token')) navigate('/login');
     if (loading) return <p className="rounded-2xl bg-white p-8 text-ufBlue shadow-sm">Loading profile...</p>;
     if (error) return <p className="rounded-2xl bg-red-50 p-8 text-red-600 shadow-sm">{error}</p>;
 
@@ -47,11 +75,55 @@ function Profile() {
                 <div className="space-y-4">
                     {reviews.map((review) => (
                         <article key={review.id} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                            <div className="flex items-center justify-between">
-                                <p className="font-semibold text-ufBlue">{review.dorm.name}</p>
-                                <span className="rounded-full bg-orange-50 px-2.5 py-1 text-xs font-semibold text-ufOrange">{review.rating}/5</span>
-                            </div>
-                            <p className="mt-3 text-sm leading-6 text-slate-700">{review.body}</p>
+                            {editingId !== review.id ? (
+                                <>
+                                    <div className="flex items-center justify-between">
+                                        <p className="font-semibold text-ufBlue">{review.dorm.name}</p>
+                                        <span className="rounded-full bg-orange-50 px-2.5 py-1 text-xs font-semibold text-ufOrange">{review.rating}/5</span>
+                                    </div>
+                                    <p className="mt-3 text-sm leading-6 text-slate-700">{review.body}</p>
+                                    {loggedInUserId === parseInt(id) && (
+                                        <>
+                                            <button
+                                                className="mt-5 w-full rounded-lg bg-ufOrange px-4 py-2.5 font-semibold text-white transition hover:bg-ufOrangeDark"
+                                                onClick={() => setEditingId(review.id)}
+                                            >Update
+                                            </button>
+                                            <button
+                                                className="mt-5 w-full rounded-lg bg-ufOrange px-4 py-2.5 font-semibold text-white transition hover:bg-ufOrangeDark"
+                                                onClick={() => handleDelete(review.dormId, review.id)}
+                                            >Delete
+                                            </button>
+                                        </>
+                                    )}
+                                </>
+                            ) : (
+                                <>
+                                    <div className="mt-4 space-y-3">
+                                        <input
+                                            className="rounded-lg border border-slate-300 px-3 py-2 outline-none transition focus:border-ufOrange focus:ring-2 focus:ring-orange-100"
+                                            type="number"
+                                            placeholder="Rating (0-5)"
+                                            value={editRating}
+                                            onChange={(e) => setEditRating(e.target.value)}
+                                        />
+                                        <input
+                                            className="rounded-lg border border-slate-300 px-3 py-2 outline-none transition focus:border-ufOrange focus:ring-2 focus:ring-orange-100"
+                                            type="text"
+                                            placeholder="Explain your rating."
+                                            value={editBody}
+                                            onChange={(e) => setEditBody(e.target.value)}
+                                        />
+                                        <p className="text-xs text-slate-500">Ratings are from 0 to 5 and should reflect your overall living experience.</p>
+                                        <button
+                                            className="w-full rounded-lg bg-ufOrange px-4 py-2 font-semibold text-white transition hover:bg-ufOrangeDark"
+                                            onClick={() => handleUpdate(review.dormId, review.id)}
+                                        >
+                                            Update Review
+                                        </button>
+                                    </div>
+                                </>
+                            )}
                         </article>
                     ))}
                     {reviews.length === 0 && (
@@ -60,8 +132,8 @@ function Profile() {
                         </div>
                     )}
                 </div>
-            </section>
-        </div>
+            </section >
+        </div >
     );
 }
 
