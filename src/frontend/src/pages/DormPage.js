@@ -11,6 +11,7 @@ function DormPage() {
 
     const { id } = useParams();
 
+    // Handles all review submissions
     const handleSubmit = async () => {
         try {
             const response = await api.post(`/dorms/${id}/reviews`, { review_body: body, rating: parseFloat(rating) });
