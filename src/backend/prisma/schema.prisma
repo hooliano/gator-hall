@@ -23,6 +23,7 @@ model User {
 model Dorm {
   id Int @id @default(autoincrement())
   name String @unique
+  imageUrl String?
   reviews Review[]
 }
 

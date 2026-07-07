@@ -1,40 +1,58 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import api from '../api'
+import Card from '../components/Card';
+import Badge from '../components/Badge';
+import Button from '../components/Button';
+import Alert from '../components/Alert';
+import Skeleton from '../components/Skeleton';
+import EmptyState from '../components/EmptyState';
+import Avatar from '../components/Avatar';
+import StarRating from '../components/StarRating';
 
 
 function Profile() {
     const [editingId, setEditingId] = useState(null);
     const [editBody, setEditBody] = useState('');
-    const [editRating, setEditRating] = useState('');
+    const [editRating, setEditRating] = useState(null);
     const [user, setUser] = useState(null);
     const [reviews, setReviews] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const [actionError, setActionError] = useState('');
     const { id } = useParams();
 
     const navigate = useNavigate();
 
     const loggedInUserId = parseInt(localStorage.getItem('userId'));
 
+    const startEditing = (review) => {
+        setActionError('');
+        setEditingId(review.id);
+        setEditBody(review.body);
+        setEditRating(review.rating);
+    };
+
     const handleDelete = async (dormId, reviewId) => {
+        setActionError('');
         try {
             await api.delete(`/dorms/${dormId}/reviews/${reviewId}`);
             setReviews(reviews.filter(r => r.id !== reviewId));
         }
         catch (error) {
-            setError(error.response?.data?.error || 'Something went wrong.');
+            setActionError(error.response?.data?.error || 'Something went wrong.');
         }
     };
 
     const handleUpdate = async (dormId, reviewId) => {
+        setActionError('');
         try {
             const response = await api.patch(`/dorms/${dormId}/reviews/${reviewId}`, { rating: editRating, review_body: editBody });
             setReviews(reviews.map(r => r.id === reviewId ? { ...response.data.review, dorm: r.dorm } : r));
             setEditingId(null);
         }
         catch (error) {
-            setError(error.response?.data?.error || 'Something went wrong.');
+            setActionError(error.response?.data?.error || 'Something went wrong.');
         }
     };
 
@@ -44,10 +62,11 @@ function Profile() {
                 const response = await api.get(`/users/${id}/reviews`);
                 setUser(response.data.user)
                 setReviews(response.data.reviews);
-                setLoading(false);
             }
             catch (error) {
                 setError(error.response?.data?.error || 'Something went wrong.');
+            }
+            finally {
                 setLoading(false);
             }
         };
@@ -56,84 +75,90 @@ function Profile() {
     }, [id]);
 
     if (!localStorage.getItem('token')) navigate('/login');
-    if (loading) return <p className="rounded-2xl bg-white p-8 text-ufBlue shadow-sm">Loading profile...</p>;
-    if (error) return <p className="rounded-2xl bg-red-50 p-8 text-red-600 shadow-sm">{error}</p>;
+
+    if (loading) {
+        return (
+            <div className="space-y-6">
+                <Skeleton className="h-40 w-full rounded-3xl" />
+                <Skeleton className="h-72 w-full rounded-3xl" />
+            </div>
+        );
+    }
+    if (error) return <Alert>{error}</Alert>;
+
+    const isOwnProfile = loggedInUserId === parseInt(id);
+    const avgGiven = reviews.length
+        ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
+        : null;
 
     return (
         <div className="space-y-6">
-            <section className="rounded-3xl bg-gradient-to-r from-ufBlue to-ufBlueDark p-8 text-white shadow-xl">
-                <p className="text-xs font-semibold uppercase tracking-wide text-blue-100">Student Profile</p>
-                <h1 className="mt-2 text-4xl font-extrabold">{user.displayName}</h1>
-                <p className="mt-2 text-blue-100">Review activity and housing feedback contributions.</p>
+            <section className="rounded-3xl bg-ufBlueDark p-8 text-white shadow-xl ring-1 ring-white/10">
+                <div className="flex items-center gap-4">
+                    <Avatar name={user.displayName} size="h-16 w-16" className="text-xl ring-4 ring-white/20" />
+                    <div>
+                        <p className="text-xs font-semibold uppercase tracking-wide text-white/80">Student Profile</p>
+                        <h1 className="mt-1 text-3xl font-extrabold md:text-4xl">{user.displayName}</h1>
+                    </div>
+                </div>
+                <div className="mt-6 flex flex-wrap gap-3">
+                    <span className="rounded-full bg-white/12 px-3 py-1 text-sm">
+                        {reviews.length} review{reviews.length !== 1 ? 's' : ''} posted
+                    </span>
+                    {avgGiven !== null && (
+                        <span className="rounded-full bg-white/12 px-3 py-1 text-sm">Avg rating given: {avgGiven.toFixed(1)}/5</span>
+                    )}
+                </div>
             </section>
 
-            <section className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
+            <Card>
                 <div className="mb-4 flex items-end justify-between">
                     <h2 className="text-2xl font-bold text-slate-900">Reviews</h2>
-                    <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-ufBlue">{reviews.length} posted</span>
+                    <Badge variant="blue">{reviews.length} posted</Badge>
                 </div>
-                <div className="space-y-4">
+                {actionError && <Alert className="mb-4">{actionError}</Alert>}
+                <div className="stagger-children space-y-4">
                     {reviews.map((review) => (
-                        <article key={review.id} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                        <article key={review.id} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-soft">
                             {editingId !== review.id ? (
                                 <>
                                     <div className="flex items-center justify-between">
                                         <p className="font-semibold text-ufBlue">{review.dorm.name}</p>
-                                        <span className="rounded-full bg-orange-50 px-2.5 py-1 text-xs font-semibold text-ufOrange">{review.rating}/5</span>
+                                        <StarRating value={review.rating} size="h-4 w-4" showValue />
                                     </div>
                                     <p className="mt-3 text-sm leading-6 text-slate-700">{review.body}</p>
-                                    {loggedInUserId === parseInt(id) && (
-                                        <>
-                                            <button
-                                                className="mt-5 w-full rounded-lg bg-ufOrange px-4 py-2.5 font-semibold text-white transition hover:bg-ufOrangeDark"
-                                                onClick={() => setEditingId(review.id)}
-                                            >Update
-                                            </button>
-                                            <button
-                                                className="mt-5 w-full rounded-lg bg-ufOrange px-4 py-2.5 font-semibold text-white transition hover:bg-ufOrangeDark"
-                                                onClick={() => handleDelete(review.dormId, review.id)}
-                                            >Delete
-                                            </button>
-                                        </>
+                                    {isOwnProfile && (
+                                        <div className="mt-4 flex gap-2">
+                                            <Button variant="secondary" size="sm" onClick={() => startEditing(review)}>Update</Button>
+                                            <Button variant="danger" size="sm" onClick={() => handleDelete(review.dormId, review.id)}>Delete</Button>
+                                        </div>
                                     )}
                                 </>
                             ) : (
-                                <>
-                                    <div className="mt-4 space-y-3">
-                                        <input
-                                            className="rounded-lg border border-slate-300 px-3 py-2 outline-none transition focus:border-ufOrange focus:ring-2 focus:ring-orange-100"
-                                            type="number"
-                                            placeholder="Rating (0-5)"
-                                            value={editRating}
-                                            onChange={(e) => setEditRating(e.target.value)}
-                                        />
-                                        <input
-                                            className="rounded-lg border border-slate-300 px-3 py-2 outline-none transition focus:border-ufOrange focus:ring-2 focus:ring-orange-100"
-                                            type="text"
-                                            placeholder="Explain your rating."
-                                            value={editBody}
-                                            onChange={(e) => setEditBody(e.target.value)}
-                                        />
-                                        <p className="text-xs text-slate-500">Ratings are from 0 to 5 and should reflect your overall living experience.</p>
-                                        <button
-                                            className="w-full rounded-lg bg-ufOrange px-4 py-2 font-semibold text-white transition hover:bg-ufOrangeDark"
-                                            onClick={() => handleUpdate(review.dormId, review.id)}
-                                        >
-                                            Update Review
-                                        </button>
+                                <div className="space-y-3">
+                                    <p className="font-semibold text-ufBlue">{review.dorm.name}</p>
+                                    <StarRating value={editRating} onChange={setEditRating} size="h-6 w-6" />
+                                    <textarea
+                                        className="w-full resize-none rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm outline-none transition focus:border-ufOrange focus:ring-4 focus:ring-orange-100"
+                                        rows={3}
+                                        placeholder="Explain your rating."
+                                        value={editBody}
+                                        onChange={(e) => setEditBody(e.target.value)}
+                                    />
+                                    <div className="flex gap-2">
+                                        <Button size="sm" onClick={() => handleUpdate(review.dormId, review.id)}>Save Changes</Button>
+                                        <Button variant="ghost" size="sm" onClick={() => setEditingId(null)}>Cancel</Button>
                                     </div>
-                                </>
+                                </div>
                             )}
                         </article>
                     ))}
                     {reviews.length === 0 && (
-                        <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center text-sm text-slate-500">
-                            This user has not posted any reviews yet.
-                        </div>
+                        <EmptyState title="No reviews yet" description="This user has not posted any reviews yet." />
                     )}
                 </div>
-            </section >
-        </div >
+            </Card>
+        </div>
     );
 }
 

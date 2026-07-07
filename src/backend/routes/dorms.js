@@ -2,10 +2,41 @@ const router = require('express').Router();
 const prisma = require('../db.js');
 const authMiddleware = require('../middleware/auth.js');
 
+// Shapes a Dorm row (with its reviews' ratings) into the API response,
+// computing the aggregate rating fields shared by the list and detail routes.
+const withRatingSummary = (dorm) => {
+    const { reviews, ...rest } = dorm;
+    const reviewCount = reviews.length;
+    const avgRating = reviewCount
+        ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviewCount
+        : null;
+    return { ...rest, avgRating, reviewCount };
+};
+
 router.get('/', async (req, res) => {
     try {
-        const dorms = await prisma.dorm.findMany();
-        res.json(dorms);
+        const dorms = await prisma.dorm.findMany({
+            include: { reviews: { select: { rating: true } } },
+        });
+        res.json(dorms.map(withRatingSummary));
+    }
+    catch (error) {
+        res.status(500).json({ error: 'Something went wrong.' });
+    }
+});
+
+router.get('/:id', async (req, res) => {
+    try {
+        const dorm = await prisma.dorm.findUnique({
+            where: { id: parseInt(req.params.id) },
+            include: { reviews: { select: { rating: true } } },
+        });
+
+        if (!dorm) {
+            return res.status(404).json({ error: 'Dorm not found.' });
+        }
+
+        res.json(withRatingSummary(dorm));
     }
     catch (error) {
         res.status(500).json({ error: 'Something went wrong.' });
