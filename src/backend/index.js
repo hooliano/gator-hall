@@ -9,11 +9,11 @@ app.use(express.json());
 app.use(cors({
     origin: [
         'http://localhost:3000',
+        'http://localhost:5000',
         'https://sprightly-mousse-2d751b.netlify.app'
     ],
     credentials: true
 }));
-
 app.get('/', (req, res) => {
     res.json({ message: 'GatorHall API is running!' });
 });
