@@ -9,8 +9,7 @@ app.use(express.json());
 app.use(cors({
     origin: [
         'http://localhost:3000',
-        'http://localhost:5000',
-        'https://sprightly-mousse-2d751b.netlify.app'
+        'http://gatorhall.netlify.app'
     ],
     credentials: true
 }));
